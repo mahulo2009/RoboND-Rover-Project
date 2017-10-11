@@ -13,7 +13,7 @@ def filter_navigable_angles(Rover):
 
 # Filter angle corrections smaller than five degrees    
 def filter_steer_correction(steer):
-    stare_angle_threshold = 3
+    stare_angle_threshold = 5
     # Do not apply small corrections to avoid oscilations        
     if abs(steer) < stare_angle_threshold:
         return 0
@@ -50,10 +50,14 @@ def navigable_terrain_check(Rover,threshold):
 # Select the steer angle to navigate
 def rover_select_navigation_steer(Rover):
     # Offset to the angle to follow the wall. 
-    stare_angle_offset = -12
+    stare_angle_offset = -11
     #Filter navigable terrain points farther than 6 meters
     nav_angles = filter_navigable_angles(Rover)
-    steer = np.clip(np.mean(nav_angles * 180/np.pi)+stare_angle_offset, -15, 15)
+    nav_angles_mean = np.mean(nav_angles * 180/np.pi)
+    nav_angles_offset = nav_angles_mean + stare_angle_offset 
+    steer = np.clip(nav_angles_offset, -15, 15)
+    #print ('nav_angles_mean =',nav_angles_mean,' nav_angles_offset = ', nav_angles_offset, ' steer = ',steer )
+    
     #Return the steer angle
     return filter_steer_correction(steer)
 
@@ -93,12 +97,6 @@ def rock_check(Rover):
         return True
     else: 
         return False
-        
-# Select the steer angle to pick up a rock
-def rover_select_rock_steer(Rover):
-    angle = np.clip(np.mean(Rover.rock_angles * 180/np.pi), -15, 15)
-    return filter_steer_correction(angle)
-    
 
 def rock_detect(Rover):
     if rock_check(Rover):
@@ -116,34 +114,68 @@ def normalize_angle(angle):
     result = angle
     while(result >360):
         result-=360
-    if result > 180:
-        result-= 360
     return result
     
 # Select the direction to twist 
 def rover_turn_unstuk_yaw(Rover):
     Rover.throttle = 0
     Rover.brake = 0
+    
+    yaw = normalize_angle(Rover.yaw)
     unstuck_yaw = normalize_angle(Rover.unstuck_yaw)
-    unstuck_yaw_last = normalize_angle(Rover.unstuck_yaw_last)
-    if (unstuck_yaw - unstuck_yaw_last) < 0:
-        Rover.steer = -15
-    else: 
+    if (yaw < unstuck_yaw):
+        distance_1 = abs (yaw-unstuck_yaw)
+        distance_2 = yaw + 360 - unstuck_yaw
+    else:
+        distance_1 = 360 - yaw + unstuck_yaw
+        distance_2 = abs (yaw-unstuck_yaw)
+    
+    if  distance_1 < distance_2:
         Rover.steer = 15
+    else:    
+        Rover.steer = -15
+    #print ('distance_1=',distance_1,'distance_2=',distance_2)    
+    #print ('Rover.yaw=',normalize_angle(Rover.yaw),'Rover.unstuck_yaw=',normalize_angle(Rover.unstuck_yaw),'steer = ',steer)
         
 # Check if the angle to go forward has been reached        
 def rover_go_forward_unstack_check(Rover):
-    unstuck_yaw = normalize_angle(Rover.unstuck_yaw)
     yaw = normalize_angle(Rover.yaw)
+    unstuck_yaw = normalize_angle(Rover.unstuck_yaw)
     angle_diference = abs(unstuck_yaw - yaw)
-    
-    print('unstuck_yaw =',unstuck_yaw,'yaw =',yaw,'angle_diference =',angle_diference )
-    
+    #print('unstuck_yaw =',unstuck_yaw,'yaw =',yaw)
     if angle_diference < 5 :
         return True
     else:
         return False
-    
+
+def rover_select_rock_steer(Rover):
+    for idx in range(len(Rover.samples_pos[0])):
+        test_rock_x = Rover.samples_pos[0][idx]
+        test_rock_y = Rover.samples_pos[1][idx]
+        rock_sample_dists = np.sqrt((test_rock_x - Rover.pos[0])**2 + \
+                            (test_rock_y - Rover.pos[1])**2)
+        
+        if np.min(rock_sample_dists) < 3:
+            #print ( 'rover_x=', Rover.pos[0] , 'rover_y=', Rover.pos[1] ,'rock_x=',test_rock_x,'rock_y=',test_rock_y)    
+            #print ( 'rover_x=', test_rock_x - Rover.pos[0] , 'rover_y=', test_rock_y - Rover.pos[1] )
+            angle_world = math.degrees(np.arctan2(test_rock_y - Rover.pos[1], test_rock_x - Rover.pos[0]))
+            #print (angle_world)
+            angle_rover =  Rover.yaw - angle_world
+            #print (angle_rover) 
+            steer = -np.clip(angle_rover , -15, 15)
+            #print (steer)
+            return filter_steer_correction(steer)
+
+def rover_close_to_rock_check(Rover):
+    for idx in range(len(Rover.samples_pos[0])):
+        test_rock_x = Rover.samples_pos[0][idx]
+        test_rock_y = Rover.samples_pos[1][idx]
+        rock_sample_dists = np.sqrt((test_rock_x - Rover.pos[0])**2 + \
+                            (test_rock_y - Rover.pos[1])**2)
+        if np.min(rock_sample_dists) < 3:
+            return True
+    return False
+
 # Decision tree for determining throttle, brake and steer 
 # commands based on the output of the perception_step() function
 def decision_step(Rover):
@@ -154,12 +186,13 @@ def decision_step(Rover):
             if rover_is_position_stuck_check(Rover):
                 Rover.mode = 'stuck'
             else:
-                # Check if we found a rock
-                if rock_detect(Rover) :
-                    Rover.mode = 'rockdetected'
                 # Check if there is navigable terrain ahead       
-                elif navigable_terrain_check(Rover,threshold=Rover.stop_forward):
-                    # Set the navigable velocity
+                if navigable_terrain_check(Rover,threshold=Rover.stop_forward):
+                    # Check if we found a rock
+                    #if rover_close_to_rock_check(Rover) :
+                    #    Rover.mode = 'rockapproaching'
+                    #else:
+                        # Set the navigable velocity
                     rover_set_velocity(Rover,Rover.throttle_set)
                     # Set the navigable angle
                     Rover.steer = rover_select_navigation_steer(Rover)
@@ -180,15 +213,14 @@ def decision_step(Rover):
             if Rover.vel > 0.2:
                 rover_stop(Rover)
             else:
-                #print ('Rover.unstuck_yaw = ',Rover.unstuck_yaw)
                 # Twist the rover in the  unstuck  direction
                 rover_turn_unstuk_yaw(Rover)
                 # Go forward in the unstuck direction
-                if rover_go_forward_unstack_check(Rover): 
-                    Rover.mode = 'forward'
+                if rover_go_forward_unstack_check(Rover):
                     # Select the next unstuck direction
                     Rover.unstuck_yaw=random.uniform(0,360)
                     Rover.unstuck_yaw_last=Rover.yaw
+                    Rover.mode = 'forward'
                     # Reset the stuck timer
                     Rover.stuck_position_time = time.time()
         elif Rover.mode == 'rockdetected':
@@ -197,24 +229,23 @@ def decision_step(Rover):
             else:
                 if Rover.vel > 0.2:
                     rover_stop(Rover)
-                else:
-                    Rover.mode = 'rockapproaching'
         elif Rover.mode == 'rockapproaching':
             if rover_is_position_stuck_check(Rover):
                 Rover.mode = 'stuck'
             else:
-                # Set the rock approaching velocity
-                rover_set_velocity(Rover,0.2)
-                if rock_check(Rover):
-                    # Set the angle into the rock direction
-                    Rover.steer = rover_select_rock_steer(Rover)
-                    # If we are close enough, pick up the rock
-                    if Rover.near_sample:
-                        Rover.mode = 'pickuprock'
-                #else:
-                    # If the rock is missed, go forward
-                    # Define timeout pickup the rock TODO
-                    
+                if navigable_terrain_check(Rover,threshold=Rover.stop_forward):
+                    if rover_close_to_rock_check(Rover) :
+                        # Set the rock approaching velocity
+                        rover_set_velocity(Rover,0.2)
+                        # Set the angle into the rock direction
+                        Rover.steer = rover_select_rock_steer(Rover)
+                        # If we are close enough, pick up the rock
+                        if Rover.near_sample:
+                            Rover.mode = 'pickuprock'
+                    else:
+                        Rover.mode = 'forward'
+                else:
+                    Rover.mode = 'stop'
         elif Rover.mode == 'pickuprock':                       
             # Stop the rover to pick up the rock
             rover_stop(Rover)
@@ -229,10 +260,14 @@ def decision_step(Rover):
                 #Reset stuck time and go forward
                 Rover.stuck_position_time = time.time() 
                 Rover.mode = 'forward'
-
+            
     if Rover.near_sample and Rover.vel == 0 and not Rover.picking_up:
         Rover.send_pickup = True
         
-    print("Rover.mode = ",Rover.mode," Rover.throttle = ",Rover.throttle," Rover.brake = ", Rover.brake," Rover.vel = ",Rover.vel," Rover.steer = ",Rover.steer)   
+    print("Rover.mode = ",Rover.mode," Rover.throttle = ",Rover.throttle," Rover.brake = ", Rover.brake," Rover.vel = ",Rover.vel," Rover.steer = ",Rover.steer)
+    
+    #Rover.throttle = 0
+    #Rover.brake = 0
+    #Rover.steer = 0
     
     return Rover

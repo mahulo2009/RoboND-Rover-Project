@@ -165,9 +165,9 @@ def perception_step(Rover):
     navigable_x_world, navigable_y_world = pix_to_world(navigable_xpix, 
 							navigable_ypix, 
 							Rover.pos[0], 
-                                			Rover.pos[1], 
+                            Rover.pos[1], 
 							Rover.yaw, 
-                                			Rover.worldmap.shape[0], 
+                            Rover.worldmap.shape[0], 
 							scale)
 
 
