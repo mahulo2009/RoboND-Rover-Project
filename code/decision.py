@@ -7,27 +7,30 @@ import Strategy,RoverController
 def decision_step(Rover):
     # Check if we have vision data to make decisions with
     if Rover.nav_angles is not None:
-        
+        # Get reference to the rover controller
         rover = RoverController.RoverController(Rover)
+        # Select the strategy to go to a target: pick up rocks or go home.
         if Rover.samples_collected == 5:
             target = Strategy.StrategyHome(Rover)
         else:
             target = Strategy.StrategyRock(Rover)
         
+        # Mode move forward        
         if Rover.mode == 'forward':
             # Check if we are stuck
             if rover.is_stuck():
                 Rover.mode = 'stuck'
             else:
+                # Target detected reduce velocity and go for it
                 if target.is_detected() :
                     if Rover.vel > 0.5:
                         rover.stop()
                     else:
                         rover.set_velocity(0.1)
-                        # Set the navigable angle
+                        # If target is reacheable, no obstacles between the rover and target. 
                         if (target.is_reacheable()):
                             Rover.steer = target.select_steer()
-
+                        # If we are close enough to the target    
                         if target.is_close():
                             if Rover.samples_collected == 5:
                                 Rover.mode = 'gameover'                                
@@ -35,7 +38,7 @@ def decision_step(Rover):
                                 Rover.mode = 'pickuprock'
                 # Check if there is navigable terrain ahead       
                 elif rover.is_navigable_terrain(threshold=Rover.stop_forward):
-                    
+                    # Set the navigable velocity
                     rover.set_velocity(Rover.throttle_set)
                     # Set the navigable angle
                     Rover.steer = rover.select_navigation_steer()
@@ -60,11 +63,11 @@ def decision_step(Rover):
                 rover.select_unstuk_yaw()
                 # Go forward in the unstuck direction
                 if rover.is_unstuk_yaw_reached():
+                    # Reset the stuck timer
+                    Rover.stuck_position_time = time.time()
                     # Select the next unstuck direction
                     Rover.unstuck_yaw=random.uniform(0,360)
                     Rover.mode = 'forward'
-                    # Reset the stuck timer
-                    Rover.stuck_position_time = time.time()
         elif Rover.mode == 'pickuprock':                       
             # Stop the rover to pick up the rock
             rover.stop()

@@ -2,6 +2,7 @@ import math
 import time
 import numpy as np
 import random
+from supporting_functions import normalize_angle,filter_steer_correction
 
 # Filter navigable terrain points farther than 4 meters    
 def filter_navigable_angles(Rover):
@@ -9,25 +10,6 @@ def filter_navigable_angles(Rover):
     index_distance_faraway = Rover.nav_dists < distance_thredshold
     nav_angles = Rover.nav_angles[index_distance_faraway]
     return nav_angles
-
-#TODO
-# Filter angle corrections smaller than five degrees    
-def filter_steer_correction(steer,stare_angle_threshold = 5):
-    # Do not apply small corrections to avoid oscilations        
-    if abs(steer) < stare_angle_threshold:
-        return 0
-    else:
-        return steer        
-
-# Normalize the angle between 0 and 360
-def normalize_angle(angle):
-    result = angle
-    while(result <0):
-        result+=360
-    while(result >360):
-        result-=360
-    return result
-
 
 class RoverController:
     

@@ -40,8 +40,8 @@ class RoverState():
     def __init__(self):
         self.start_time = None # To record the start time of navigation
         self.total_time = None # To record total duration of naviagation
-        self.stuck_position_time = 0 # To record total duration of Rover stopped.
-        self.unstuck_yaw = None #Unstack
+        self.stuck_position_time = 0 # To record total duration of Rover stuck.
+        self.unstuck_yaw = None # Angle to try to unstack
         self.img = None # Current camera image
         self.pos = None # Current position (x, y)
         self.yaw = None # Current yaw angle
@@ -53,8 +53,8 @@ class RoverState():
         self.brake = 0 # Current brake value
         self.nav_angles = None # Angles of navigable terrain pixels
         self.nav_dists = None # Distances of navigable terrain pixels
-        self.rock_angles = None
-        self.rock_dists = None
+        self.rock_angles = None # Angles of rock pixels
+        self.rock_dists = None # Distances of rock pixels
         self.ground_truth = ground_truth_3d # Ground truth worldmap
         self.mode = 'forward' # Current mode (can be forward or stop)
         self.throttle_set = 1 # Throttle setting when accelerating

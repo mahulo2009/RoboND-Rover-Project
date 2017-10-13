@@ -5,6 +5,23 @@ from io import BytesIO, StringIO
 import base64
 import time
 
+# Filter angle corrections smaller than five degrees    
+def filter_steer_correction(steer,stare_angle_threshold = 5):
+    # Do not apply small corrections to avoid oscilations        
+    if abs(steer) < stare_angle_threshold:
+        return 0
+    else:
+        return steer        
+
+# Normalize the angle between 0 and 360
+def normalize_angle(angle):
+    result = angle
+    while(result <0):
+        result+=360
+    while(result >360):
+        result-=360
+    return result
+
 # Define a function to convert telemetry strings to float independent of decimal convention
 def convert_to_float(string_to_convert):
       if ',' in string_to_convert:
