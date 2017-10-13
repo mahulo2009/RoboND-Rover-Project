@@ -24,7 +24,6 @@ def update_rover(Rover, data):
             Rover.samples_to_find = np.int(data["sample_count"])
             Rover.stuck_position_time = time.time()
             Rover.unstuck_yaw=0
-            Rover.unstuck_yaw_last=0
 
       # Or just update elapsed time
       else:
