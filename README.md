@@ -83,8 +83,7 @@ def color_thresh(img, rgb_thresh=(0,0,0,0,0,0)):
     data.worldmap[y_world, x_world,2] += 10
 ```
 
-[![IMAGE ALT TEXT](http://img.youtube.com/vi/q6FgESy9jy0/0.jpg)]
-(http://www.youtube.com/watch?v=q6FgESy9jy0 "Video Title")
+[![Navigation video](http://img.youtube.com/vi/q6FgESy9jy0/0.jpg)](http://www.youtube.com/watch?v=q6FgESy9jy0 "Navigation video - Clickt to Watch")
 
 
 ### Autonomous Navigation and Mapping
