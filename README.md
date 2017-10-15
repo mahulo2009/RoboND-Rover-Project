@@ -125,6 +125,8 @@ finishpickuprock | Check if the rock was collected.
 gameover | The rover stops at the starting point.
 
 
+[//]: # (Image References)
+
 [image1]: ./misc/State_Machine.jpg
 
 
