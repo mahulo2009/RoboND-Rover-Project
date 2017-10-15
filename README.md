@@ -110,11 +110,9 @@ Several strategies have been used to achieve this goal; which will then be expla
 
 #### Decision
 
-El algoritmo de decisión se ha implementado como una máquina de estado. Los posibles estados son: adelante, parada, atascado, pickuprock, finishpickuprock y gameover. Editar
-
-El algoritmo de decisión se ha implementado como una máquina de estado. Los posibles estados son: adelante, parada, atascado, pickuprock, finishpickuprock y gameover.
-
 The decision algorithm has been implemented as a state machine. Possible states are: forward, stop, stuck, pickuprock, finishpickuprock and gameover.
+
+The following table shows a description of each state.
 
 
 State | Description
@@ -125,6 +123,12 @@ stuck | The rover reduces speed. An angle to exit the stuck is chosen randomly.
 pickuprock | Stop the rover and collect the rock.
 finishpickuprock | Check if the rock was collected.
 gameover | The rover stops at the starting point.
+
+
+[image1]: ./misc/State_Machine.jpg
+
+
+
 
 
 
