@@ -7,6 +7,10 @@
 
 #### Obstacles and rock sample indentification
 
+
+The perspect_transform function has been modified to include the perspective transformation of an image with all values ​​to one. This mask will then be used to define the inverse of the terrain, that is, the obstacles.
+
+
 ```python
 def perspect_transform(img, src, dst):
     M = cv2.getPerspectiveTransform(src, dst)
@@ -16,6 +20,8 @@ def perspect_transform(img, src, dst):
     return warped,mask
 ```
 
+
+The color_thresh function has been modified to manage a threshold with maximum and minimum range for each RGB channel. This change allows to reuse this function for both terrain and rocks.
 
 
 ```python
@@ -37,49 +43,48 @@ def color_thresh(img, rgb_thresh=(0,0,0,0,0,0)):
 
 #### Creating a worldmap
 
-```python
-     # Let's create more images to add to the mosaic, first a warped image
-    warped,mask = perspect_transform(img, source, destination)
 
+After defining the source and destination points in the image, we apply the perspective transformation. This function returns the converted image as well as the transformation of an image with all its values ​​to one, to be used to define the non-navigable region, ie, obstacles.
+
+```python
+    warped,mask = perspect_transform(img, source, destination)
+```
+
+The warped image is applied a color threshold to detect navigable terrain, rocks, and obstacles such as the inverse of navigable terrain.
+
+```python
     terrain_threshed = color_thresh(warped,rgb_thresh=(160,255,160,255,160,255))
     obstacles_threshed = np.absolute(np.float32(terrain_threshed)-1)*mask
     rock_threshed = color_thresh(warped,rgb_thresh=(100,255,100,255,0,70))
+```
 
 
-    # Add the warped image in the upper right hand corner
+An image is constructed with the result, using each of the RGB channels to visualize what has been identified as obstacle, as rock, or as navigable terrain.
+
+
+```python
     output_image[0:img.shape[0], img.shape[1]:,0] = obstacles_threshed*255
     output_image[0:img.shape[0], img.shape[1]:,1] = rock_threshed*255
     output_image[0:img.shape[0], img.shape[1]:,2] = terrain_threshed*255
+```
 
-    scale = 10.0
+We convert from image coordinates to rover coordinates.
 
+```python
     xpix, ypix = rover_coords(terrain_threshed)
+```
+
+Finally, taking into account the position and orientation of the rover in the world, we convert from rover coordinates into coordinates in the world.
+
+
+```python
+    scale = 10.0
     x_world, y_world = pix_to_world(xpix, ypix,
                                     float(data.xpos[data.count]),
                                     float(data.ypos[data.count])
                                     float(data.yaw[data.count])
                                     data.worldmap.shape[0],
                                     scale)
-
-    xpix_obstacle, ypix_obstacle = rover_coords(obstacles_threshed)
-    x_obstacle, y_obstacle = pix_to_world(xpix_obstacle, ypix_obstacle,
-                                    float(data.xpos[data.count]),
-                                    float(data.ypos[data.count]),
-                                    float(data.yaw[data.count]),
-                                    data.worldmap.shape[0],
-                                    scale)
-
-    xpix_rock, ypix_rock = rover_coords(rock_threshed)
-    x_rock, y_rock = pix_to_world(xpix_rock, ypix_rock,
-                                    float(data.xpos[data.count]),
-                                    float(data.ypos[data.count]),
-                                    float(data.yaw[data.count]),
-                                    data.worldmap.shape[0],
-                                    scale)
-
-
-    data.worldmap[y_obstacle, x_obstacle,0] += 1
-    data.worldmap[y_rock, x_rock,1] += 1
     data.worldmap[y_world, x_world,2] += 10
 ```
 
