@@ -105,10 +105,26 @@ Several strategies have been used to achieve this goal; which will then be expla
 * During the navigation the rover is picking up the rocks that it finds in its passage. In addition, when it finishs collecting all the rocks, it must return to the starting point. The solution chosen does not differentiate between the way to collect the rock or go to the starting point: the rover navigates and when it is near a target it slows down and heads towards it. The goal can be either to take the rock or to go to the starting point.
 
 
+
 #### Perception
 
 #### Decision
 
+El algoritmo de decisión se ha implementado como una máquina de estado. Los posibles estados son: adelante, parada, atascado, pickuprock, finishpickuprock y gameover. Editar
+
+El algoritmo de decisión se ha implementado como una máquina de estado. Los posibles estados son: adelante, parada, atascado, pickuprock, finishpickuprock y gameover.
+
+The decision algorithm has been implemented as a state machine. Possible states are: forward, stop, stuck, pickuprock, finishpickuprock and gameover.
+
+
+State | Description
+------------ | -------------
+forward | The rover moves along the right wall.
+stop | The rover slows down and then turns on itself until it finds navigable terrain again.
+stuck | The rover reduces speed. An angle to exit the stuck is chosen randomly.
+pickuprock | Stop the rover and collect the rock.
+finishpickuprock | Check if the rock was collected.
+gameover | The rover stops at the starting point.
 
 
 
