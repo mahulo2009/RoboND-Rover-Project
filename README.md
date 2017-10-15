@@ -94,9 +94,22 @@ Finally, taking into account the position and orientation of the rover in the wo
 ### Autonomous Navigation and Mapping
 
 
+In autonomous navigation the rover will travel as much of the terrain as possible, picking up the rocks that are found in its path and returning to the starting point when all the rocks have been collected.
+
+Several strategies have been used to achieve this goal; which will then be explained in more detail, but which can be summarized in:
+
+* The rover will always move along the wall, to its right. In this way it will travel all over the world, without using sophisticated methods of navigation.
+* The strategy to navigate is based on the average of the angles, in polar coordinates, of the navigable terrain. On some occasions this strategy makes the rove of laps in circles. To avoid this, when standard deviation is very high, normally in open spaces where navigable terrain exists in many directions, a random spin is introduced to the navigation direction, to avoid circling.
+* In case it does not have navigable terrain in front, it will turn around until it finds navigable terrain again. This condition is useful when it  is in a cul-de-sac.
+* At certain times, the rover is stuck between obstacles. A strategy has been implemented, based on the choice of a random unstuck angle, which allows to recover the state of navigation again.
+* During the navigation the rover is picking up the rocks that it finds in its passage. In addition, when it finishs collecting all the rocks, it must return to the starting point. The solution chosen does not differentiate between the way to collect the rock or go to the starting point: the rover navigates and when it is near a target it slows down and heads towards it. The goal can be either to take the rock or to go to the starting point.
+
+
 #### Perception
 
 #### Decision
+
+
 
 
 

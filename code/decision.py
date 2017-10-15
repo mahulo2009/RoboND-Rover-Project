@@ -10,7 +10,7 @@ def decision_step(Rover):
         # Get reference to the rover controller
         rover = RoverController.RoverController(Rover)
         # Select the strategy to go to a target: pick up rocks or go home.
-        if Rover.samples_collected == 5:
+        if Rover.samples_collected == 6:
             target = Strategy.StrategyHome(Rover)
         else:
             target = Strategy.StrategyRock(Rover)
@@ -32,7 +32,7 @@ def decision_step(Rover):
                             Rover.steer = target.select_steer()
                         # If we are close enough to the target    
                         if target.is_close():
-                            if Rover.samples_collected == 5:
+                            if Rover.samples_collected == 6:
                                 Rover.mode = 'gameover'                                
                             else:
                                 Rover.mode = 'pickuprock'
