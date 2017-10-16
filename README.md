@@ -126,7 +126,7 @@ gameover | The rover stops at the starting point.
 
 ##### Forward
 
-In forward mode the rover constantly checks if it has navigable terrain in front, choosing the angle to stay to the right of the wall. The angle is calculated as an offset of the mean of navigable terrain points, in polar coordinates. In case the standard deviation is very high, in open spaces, and to avoid circling, a random turn is introduced in the direction of the rover. Finally, for the calculation of the average only the land points are used no further than four meters.
+In forward mode the rover constantly checks if it has navigable terrain in front, choosing the angle to stay to the right of the wall. The angle is calculated as an offset of the mean of navigable terrain points, in polar coordinates. In case the standard deviation is very high, in open spaces, and to avoid circling, a random turn is introduced in the direction of the rover. Finally, for the calculation of the mean only the land points are used no further than four meters.
 
 ###### Filter navigable terrain poinst father than 4 meters
 
@@ -169,10 +169,42 @@ def select_navigation_steer(self):
     # If the Standard deviatio is high generate a random factor
     if (nav_angles_std > std_angles_threshold):
         stare_angle_random_factor = random.randrange(-1,1)
-    # Calculate the steer angle    
+    # Calculate the steer angle
     steer_angle = nav_angles_mean + stare_angle_offset * stare_angle_random_factor
     # Clip then angle between -15 and 15. The values the rover accepts. 
     steer_clipped = np.clip(steer_angle, -15, 15)
     #Return the filter steer angle
     return filter_steer_correction(steer_clipped)
 ```
+
+From the forward mode we can switch to the following modes: stuck, stop, pickuprock and gameover.
+
+* From forward to stuck: if the rover is speed zero for five seconds.
+* From forward to stop: if we do not have navigable terrain in front.
+* From forward to pickuprock: if we are near a rock
+* From forward to gameover: if we are near to starting point and we have alreay recollected all the rocks.
+
+
+###### Detect we are stuck
+```python
+def is_stuck(self):
+    # Threshold to identify if the rover is stuck
+    stuck_time_threshold = 5
+    
+    if math.fabs(self.rover.vel) < 0.1:
+        #Check for how long I have not been moving. 
+        stuck_time = time.time() - self.rover.stuck_position_time
+    
+        if stuck_time > stuck_time_threshold:
+            return True
+        else:
+            return False
+    else:
+        # Reset the timer
+        self.rover.stuck_position_time = time.time()
+```
+
+
+
+
+
