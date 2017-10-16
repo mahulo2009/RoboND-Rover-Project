@@ -124,18 +124,55 @@ pickuprock | Stop the rover and collect the rock.
 finishpickuprock | Check if the rock was collected.
 gameover | The rover stops at the starting point.
 
+##### Forward
 
-[//]: # (Image References)
+In forward mode the rover constantly checks if it has navigable terrain in front, choosing the angle to stay to the right of the wall. The angle is calculated as an offset of the mean of navigable terrain points, in polar coordinates. In case the standard deviation is very high, in open spaces, and to avoid circling, a random turn is introduced in the direction of the rover. Finally, for the calculation of the average only the land points are used no further than four meters.
 
-[image1]: ./misc/State_Machine.jpg
+###### Filter navigable terrain poinst father than 4 meters
 
+```python
+def filter_navigable_angles(Rover):
+    distance_thredshold = 40
+    index_distance_faraway = Rover.nav_dists < distance_thredshold
+    nav_angles = Rover.nav_angles[index_distance_faraway]
+    return nav_angles
+```
 
+###### Check if there is navigable terrain ahead
+```python
+def is_navigable_terrain(self,threshold):
+    #Filter navigable terrain points farther than 4 meters
+    nav_angles = filter_navigable_angles(self.rover)
+    # The number of points ahead is bigger than threshold
+    if len(nav_angles) >= threshold:
+        return True
+    else: 
+        return False
+```
 
+###### Select the steer angle to navigate
 
-
-
-
-
-
-
-
+```python
+def select_navigation_steer(self):
+    # Standard deviation threshold to considere if we may be moving in circles
+    std_angles_threshold = 28
+    # Offset to the angle to follow the wall. 
+    stare_angle_offset = -11
+    # A random factor to avoid moving in circles.
+    stare_angle_random_factor = 1
+    #Filter navigable terrain points farther than 4 meters
+    nav_angles = filter_navigable_angles(self.rover)
+    # Mean of the angles
+    nav_angles_mean = np.mean(nav_angles * 180/np.pi)
+    # Standard desviation of the angles
+    nav_angles_std = np.std(nav_angles * 180/np.pi)
+    # If the Standard deviatio is high generate a random factor
+    if (nav_angles_std > std_angles_threshold):
+        stare_angle_random_factor = random.randrange(-1,1)
+    # Calculate the steer angle    
+    steer_angle = nav_angles_mean + stare_angle_offset * stare_angle_random_factor
+    # Clip then angle between -15 and 15. The values the rover accepts. 
+    steer_clipped = np.clip(steer_angle, -15, 15)
+    #Return the filter steer angle
+    return filter_steer_correction(steer_clipped)
+```
