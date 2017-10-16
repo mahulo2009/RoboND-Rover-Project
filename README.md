@@ -126,7 +126,7 @@ gameover | The rover stops at the starting point.
 
 ##### Forward
 
-In forward mode the rover constantly checks if it has navigable terrain in front, choosing the angle to stay to the right of the wall. The angle is calculated as an offset of the mean of navigable terrain points, in polar coordinates. In case the standard deviation is very high, in open spaces, and to avoid circling, a random turn is introduced in the direction of the rover. Finally, for the calculation of the mean only the land points are used no further than four meters.
+In forward mode the rover constantly checks if it has navigable terrain in front, choosing the angle to stay to the right of the wall. The angle is calculated as an offset of the mean of navigable terrain points, in polar coordinates. In case the standard deviation is very high, in open spaces, and to avoid circling, a random turn is introduced in the direction of the rover. Finally, for the calculation of the mean only the terrain points are used no further than four meters.
 
 ###### Filter navigable terrain poinst father than 4 meters
 
@@ -181,7 +181,7 @@ From the forward mode we can switch to the following modes: stuck, stop, pickupr
 
 * From forward to stuck: if the rover is speed zero for five seconds.
 * From forward to stop: if we do not have navigable terrain in front.
-* From forward to pickuprock: if we are near a rock
+* From forward to pickuprock: if we are near a rock.
 * From forward to gameover: if we are near to starting point and we have alreay recollected all the rocks.
 
 
@@ -204,7 +204,36 @@ def is_stuck(self):
         self.rover.stuck_position_time = time.time()
 ```
 
+//TODO Diferencia entre detectar el target y estar cerca de el.
 
+###### Detect a rock
+
+```python
+def is_detected(self):
+    #Threshold to decide if we have found a rock
+    pickup_rock_threshold = 0
+    # Threshold to decide if we gor for the rock, only if the rock is on the right.
+    pickup_rock_angle_threshold = 3
+    if len(self.rover.rock_angles) > pickup_rock_threshold:
+        #If the rock is on the Left, do not go for it.
+        steer = self.select_steer()
+        if steer > pickup_rock_angle_threshold:
+            return False
+        else: 
+            return True
+    else: 
+        return False
+```
+
+###### Detect we are near a rock
+
+def is_detected(self):
+        distance = np.sqrt((self.home_pos_x - self.rover.pos[0])**2 + (self.home_pos_y - self.rover.pos[1])**2)
+        #print ('rover_home_detected = ' , distance)
+        if distance < 5:
+            return True
+        else:
+            return False
 
 
 

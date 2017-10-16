@@ -16,7 +16,7 @@ class StrategyRock:
     def is_detected(self):
         # Threshold to decide if we have found a rock
         pickup_rock_threshold = 0
-        # TODO
+        # Threshold to decide if we gor for the rock, only if the rock is on the right.
         pickup_rock_angle_threshold = 3
         #print ('rover_rock_detect len(Rover.rock_angles)= ',len(Rover.rock_angles))
         if len(self.rover.rock_angles) > pickup_rock_threshold:
