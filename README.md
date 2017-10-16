@@ -95,6 +95,42 @@ Several strategies have been used to achieve this goal; which will then be expla
 
 #### Perception
 
+The perception algorithm is based on the work done on the analisys notebook. It has been added that if the roll or pitch are very high, these values are not used to create the map since the image obtained under these conditions is not very reliable.
+
+```python
+
+#Normalize between 0 and 360        
+roll = normalize_angle(Rover.roll)
+pitch = normalize_angle(Rover.pitch)
+
+# Apply perspective transform
+warped,mask = perspect_transform(Rover.img, source, destination)
+
+scale = 10
+# Apply color threshold to identify navigable terrain
+image_max_value = np.max(Rover.img)
+navigable_thresh = color_thresh(warped,rgb_thresh=(160,image_max_value,160,image_max_value,160,image_max_value))
+# Update Rover.vision_image 
+Rover.vision_image[:,:,2] = navigable_thresh * 255
+# Convert map image pixel values to rover-centric coords
+navigable_xpix, navigable_ypix = rover_coords(navigable_thresh)
+# Convert rover-centric pixel values to world coordinates
+navigable_x_world, navigable_y_world = pix_to_world(navigable_xpix, 
+                navigable_ypix, 
+                Rover.pos[0], 
+                Rover.pos[1], 
+                Rover.yaw, 
+                Rover.worldmap.shape[0], 
+                scale)
+    
+if (roll < 0.3 and pitch < 0.3):
+    Rover.worldmap[navigable_y_world, navigable_x_world, 2] += 10
+
+```
+
+
+
+
 #### Decision
 
 The decision algorithm has been implemented as a state machine. Possible states are: forward, stop, stuck, pickuprock, finishpickuprock and gameover.
@@ -185,20 +221,45 @@ def is_stuck(self):
 
 ###### Detect we are near target
 
-The goal can be a rock or the starting point. In decision_step no distinction is made between these two scenarios, the strategy is modified in case we have already collected all the rocks. When a target is detected, the speed is reduced and the rover is directed towards the target.
+The goal can be a rock or the starting point. In decision_step no distinction is made between these two scenarios, the strategy is modified in case we have already collected all the rocks. When a target is detected, the speed is reduced and the rover is directed towards the target. If the target is to the left, and to not stop following the wall, it is ignored.
 
 ###### Detect rover is near rock
 
 ```python
+def select_steer(self):
+   rock_angles_mean = np.mean(self.rover.rock_angles) 
+    steer = np.clip(rock_angles_mean* 180/np.pi, -15, 15)
+    steer_filter = filter_steer_correction(steer,stare_angle_threshold = 3)
+    return steer_filter
+```
+
+```python
 def is_detected(self):
-    distance = np.sqrt((self.home_pos_x - self.rover.pos[0])**2 + (self.home_pos_y - self.rover.pos[1])**2)
-    if distance < 5:
-        return True
-    else:
+    # Threshold to decide if we have found a rock
+    pickup_rock_threshold = 0
+    # Threshold to decide if we gor for the rock, only if the rock is on the right.
+    pickup_rock_angle_threshold = 3
+    if len(self.rover.rock_angles) > pickup_rock_threshold:
+        #If the rock is on the Left, do not go for it.
+        steer = self.select_steer()
+        if steer > pickup_rock_angle_threshold:
+            return False
+        else: 
+            return True
+    else: 
         return False
 ```
 
 ###### Detect rover is near to the starting point
+
+```python
+def select_steer(self):
+    angle_world_home = normalize_angle(np.arctan2(self.home_pos_y - self.rover.pos[1], self.home_pos_x - self.rover.pos[0]) * 180/np.pi)
+    angle_rover_home = angle_world_home - self.rover.yaw
+    angle_clipped = np.clip(angle_rover_home, -15, 15)
+    angle_filter = filter_steer_correction(angle_clipped)
+    return angle_filter
+```
 
 ```python
 def is_detected(self):
