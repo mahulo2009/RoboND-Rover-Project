@@ -7,9 +7,7 @@
 
 #### Obstacles and rock sample indentification
 
-
 The perspect_transform function has been modified to include the perspective transformation of an image with all values ​​to one. This mask will then be used to define the inverse of the terrain, that is, the obstacles.
-
 
 ```python
 def perspect_transform(img, src, dst):
@@ -20,9 +18,7 @@ def perspect_transform(img, src, dst):
     return warped,mask
 ```
 
-
 The color_thresh function has been modified to manage a threshold with maximum and minimum range for each RGB channel. This change allows to reuse this function for both terrain and rocks.
-
 
 ```python
 def color_thresh(img, rgb_thresh=(0,0,0,0,0,0)):
@@ -34,7 +30,6 @@ def color_thresh(img, rgb_thresh=(0,0,0,0,0,0)):
     above_thresh = (img[:,:,0] > rgb_thresh[0]) & (img[:,:,0] <= rgb_thresh[1]) \
                     & (img[:,:,1] > rgb_thresh[2]) & (img[:,:,1] <= rgb_thresh[3]) \
                     & (img[:,:,2] > rgb_thresh[4]) & (img[:,:,2] <= rgb_thresh[5])
-
     # Index the array of zeros with the boolean array and set to 1
     color_select[above_thresh] = 1
     # Return the binary image
@@ -42,7 +37,6 @@ def color_thresh(img, rgb_thresh=(0,0,0,0,0,0)):
 ```
 
 #### Creating a worldmap
-
 
 After defining the source and destination points in the image, we apply the perspective transformation. This function returns the converted image as well as the transformation of an image with all its values ​​to one, to be used to define the non-navigable region, ie, obstacles.
 
@@ -58,9 +52,7 @@ The warped image is applied a color threshold to detect navigable terrain, rocks
     rock_threshed = color_thresh(warped,rgb_thresh=(100,255,100,255,0,70))
 ```
 
-
 An image is constructed with the result, using each of the RGB channels to visualize what has been identified as obstacle, as rock, or as navigable terrain.
-
 
 ```python
     output_image[0:img.shape[0], img.shape[1]:,0] = obstacles_threshed*255
@@ -76,7 +68,6 @@ We convert from image coordinates to rover coordinates.
 
 Finally, taking into account the position and orientation of the rover in the world, we convert from rover coordinates into coordinates in the world.
 
-
 ```python
     scale = 10.0
     x_world, y_world = pix_to_world(xpix, ypix,
@@ -90,9 +81,7 @@ Finally, taking into account the position and orientation of the rover in the wo
 
 [![Navigation video](http://img.youtube.com/vi/q6FgESy9jy0/0.jpg)](http://www.youtube.com/watch?v=q6FgESy9jy0 "Navigation video - Clickt to Watch")
 
-
 ### Autonomous Navigation and Mapping
-
 
 In autonomous navigation the rover will travel as much of the terrain as possible, picking up the rocks that are found in its path and returning to the starting point when all the rocks have been collected.
 
@@ -104,8 +93,6 @@ Several strategies have been used to achieve this goal; which will then be expla
 * At certain times, the rover is stuck between obstacles. A strategy has been implemented, based on the choice of a random unstuck angle, which allows to recover the state of navigation again.
 * During the navigation the rover is picking up the rocks that it finds in its passage. In addition, when it finishs collecting all the rocks, it must return to the starting point. The solution chosen does not differentiate between the way to collect the rock or go to the starting point: the rover navigates and when it is near a target it slows down and heads towards it. The goal can be either to take the rock or to go to the starting point.
 
-
-
 #### Perception
 
 #### Decision
@@ -113,7 +100,6 @@ Several strategies have been used to achieve this goal; which will then be expla
 The decision algorithm has been implemented as a state machine. Possible states are: forward, stop, stuck, pickuprock, finishpickuprock and gameover.
 
 The following table shows a description of each state.
-
 
 State | Description
 ------------ | -------------
@@ -131,10 +117,9 @@ From the forward mode we can switch to the following modes: stuck, stop, pickupr
 * From forward to pickuprock: if we are near a rock.
 * From forward to gameover: if we are near to starting point and we have alreay recollected all the rocks.
 
-
 ##### Forward
 
-In forward mode the rover checks: if it is stuck, if its speed is zero for five seconds; if it has detected a target: either rock or starting point after collecting all rocks; if it has navigable ground in front, in which case it continues moving; or if it does not have navegable terrain, in which case it goes into stop modes.
+In forward mode the rover checks: if it is stuck, if its speed is zero for five seconds; if it has detected a target: either rock or starting point after collecting all rocks; if it has navigable terrain in front, in which case it continues moving; or if it does not have navegable terrain, in which case it goes into stop mode.
 
 ```python
 # Get reference to the rover controller
@@ -176,7 +161,6 @@ if Rover.mode == 'forward':
             Rover.mode = 'stop'
 ```
 
-
 ###### Detect we are stuck
 
 To check if the rover is stuck it is seen if its speed is close to zero for 5 seconds, taking into account that we are in forward mode.
@@ -199,13 +183,11 @@ def is_stuck(self):
         self.rover.stuck_position_time = time.time()
 ```
 
-
-
 ###### Detect we are near target
 
 The goal can be a rock or the starting point. In decision_step no distinction is made between these two scenarios, the strategy is modified in case we have already collected all the rocks. When a target is detected, the speed is reduced and the rover is directed towards the target.
 
-####### Detect rover is near rock
+###### Detect rover is near rock
 
 ```python
 def is_detected(self):
@@ -217,7 +199,7 @@ def is_detected(self):
         return False
 ```
 
-####### Detect rover is near to the starting point
+###### Detect rover is near to the starting point
 
 ```python
 def is_detected(self):
@@ -229,10 +211,9 @@ def is_detected(self):
             return False
 ```
 
-####### Detect target is reacheable 
+###### Detect target is reacheable 
 
 It may happen that a rock is detected but that it is not reacheable from the position where the rover is located because there are obstacles in between.
-
 
 ```python
 def is_reacheable(self):
@@ -250,6 +231,8 @@ def is_reacheable(self):
 
 ###### Filter navigable terrain poinst father than 4 meters
 
+During navigation the rover only uses points no more than four meters.
+
 ```python
 def filter_navigable_angles(Rover):
     distance_thredshold = 40
@@ -259,6 +242,9 @@ def filter_navigable_angles(Rover):
 ```
 
 ###### Check if there is navigable terrain ahead
+
+To verify that we have navigable terrain we can count the navigable points no more than four meters away.
+
 ```python
 def is_navigable_terrain(self,threshold):
     #Filter navigable terrain points farther than 4 meters
@@ -271,6 +257,8 @@ def is_navigable_terrain(self,threshold):
 ```
 
 ###### Select the steer angle to navigate
+
+The rover will always move along the wall, to its right. Therefore, an offset of -11 degrees is applied to the mean of the navigation points, in polar coordinates. If the standard deviation is very high, a random factor is applied to the navigation angle, to avoid moving in circles. Finally, if the correction is small it does not apply, to avoid that the rover oscillates.
 
 ```python
 def select_navigation_steer(self):
@@ -296,9 +284,4 @@ def select_navigation_steer(self):
     #Return the filter steer angle
     return filter_steer_correction(steer_clipped)
 ```
-
-##### Stop
-
-In stop mode the Rover slows down, then turns on itself until it finds navigable terrain again.
-
 
