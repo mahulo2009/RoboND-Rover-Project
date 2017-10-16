@@ -2,6 +2,10 @@
 
 ---
 
+### Configuration
+
+The simulation was performed with a resolution of 1024x768 and an average of 24 Frame per second.
+
 ### Notebook Analysis
 
 
