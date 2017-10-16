@@ -124,9 +124,129 @@ pickuprock | Stop the rover and collect the rock.
 finishpickuprock | Check if the rock was collected.
 gameover | The rover stops at the starting point.
 
+From the forward mode we can switch to the following modes: stuck, stop, pickuprock and gameover.
+
+* From forward to stuck: if the rover is speed zero for five seconds.
+* From forward to stop: if we do not have navigable terrain in front.
+* From forward to pickuprock: if we are near a rock.
+* From forward to gameover: if we are near to starting point and we have alreay recollected all the rocks.
+
+
 ##### Forward
 
-In forward mode the rover constantly checks if it has navigable terrain in front, choosing the angle to stay to the right of the wall. The angle is calculated as an offset of the mean of navigable terrain points, in polar coordinates. In case the standard deviation is very high, in open spaces, and to avoid circling, a random turn is introduced in the direction of the rover. Finally, for the calculation of the mean only the terrain points are used no further than four meters.
+In forward mode the rover checks: if it is stuck, if its speed is zero for five seconds; if it has detected a target: either rock or starting point after collecting all rocks; if it has navigable ground in front, in which case it continues moving; or if it does not have navegable terrain, in which case it goes into stop modes.
+
+```python
+# Get reference to the rover controller
+rover = RoverController.RoverController(Rover)
+# Select the strategy to go to a target: pick up rocks or go home.
+if Rover.samples_collected == 6:
+    target = Strategy.StrategyHome(Rover)
+else:
+    target = Strategy.StrategyRock(Rover)
+
+if Rover.mode == 'forward':
+    # Check if we are stuck
+    if rover.is_stuck():
+        Rover.mode = 'stuck'
+    else:
+        # Target detected reduce velocity and go for it
+        if target.is_detected() :
+            if Rover.vel > 0.5:
+                rover.stop()
+            else:
+                rover.set_velocity(0.1)
+                # If target is reacheable, no obstacles between the rover and target. 
+                if (target.is_reacheable()):
+                    Rover.steer = target.select_steer()
+                # If we are close enough to the target    
+                if target.is_close():
+                    if Rover.samples_collected == 6:
+                        Rover.mode = 'gameover'                                
+                    else:
+                        Rover.mode = 'pickuprock'
+        # Check if there is navigable terrain ahead       
+        elif rover.is_navigable_terrain(threshold=Rover.stop_forward):
+            # Set the navigable velocity
+            rover.set_velocity(Rover.throttle_set)
+            # Set the navigable angle
+            Rover.steer = rover.select_navigation_steer()
+        else:
+            # There is not navigable terrain ahead, enter stop mode
+            Rover.mode = 'stop'
+```
+
+
+###### Detect we are stuck
+
+To check if the rover is stuck it is seen if its speed is close to zero for 5 seconds, taking into account that we are in forward mode.
+
+```python
+def is_stuck(self):
+    # Threshold to identify if the rover is stuck
+    stuck_time_threshold = 5
+    
+    if math.fabs(self.rover.vel) < 0.1:
+        #Check for how long I have not been moving. 
+        stuck_time = time.time() - self.rover.stuck_position_time
+    
+        if stuck_time > stuck_time_threshold:
+            return True
+        else:
+            return False
+    else:
+        # Reset the timer
+        self.rover.stuck_position_time = time.time()
+```
+
+
+
+###### Detect we are near target
+
+The goal can be a rock or the starting point. In decision_step no distinction is made between these two scenarios, the strategy is modified in case we have already collected all the rocks. When a target is detected, the speed is reduced and the rover is directed towards the target.
+
+####### Detect rover is near rock
+
+```python
+def is_detected(self):
+    distance = np.sqrt((self.home_pos_x - self.rover.pos[0])**2 + (self.home_pos_y - self.rover.pos[1])**2)
+    #print ('rover_home_detected = ' , distance)
+    if distance < 5:
+        return True
+    else:
+        return False
+```
+
+####### Detect rover is near to the starting point
+
+```python
+def is_detected(self):
+        distance = np.sqrt((self.home_pos_x - self.rover.pos[0])**2 + (self.home_pos_y - self.rover.pos[1])**2)
+        #print ('rover_home_detected = ' , distance)
+        if distance < 5:
+            return True
+        else:
+            return False
+```
+
+####### Detect target is reacheable 
+
+It may happen that a rock is detected but that it is not reacheable from the position where the rover is located because there are obstacles in between.
+
+
+```python
+def is_reacheable(self):
+    if (len (self.rover.rock_angles)!=0):
+        rock_angles_mean = np.mean(self.rover.rock_angles)
+        navigable_angle_index_ = self.rover.nav_angles < rock_angles_mean
+        nav_angles = self.rover.nav_angles[navigable_angle_index_]
+        if len(nav_angles) > 0:
+            return True
+        else: 
+            return False
+    else:
+        return False
+```
 
 ###### Filter navigable terrain poinst father than 4 meters
 
@@ -177,63 +297,8 @@ def select_navigation_steer(self):
     return filter_steer_correction(steer_clipped)
 ```
 
-From the forward mode we can switch to the following modes: stuck, stop, pickuprock and gameover.
+##### Stop
 
-* From forward to stuck: if the rover is speed zero for five seconds.
-* From forward to stop: if we do not have navigable terrain in front.
-* From forward to pickuprock: if we are near a rock.
-* From forward to gameover: if we are near to starting point and we have alreay recollected all the rocks.
-
-
-###### Detect we are stuck
-```python
-def is_stuck(self):
-    # Threshold to identify if the rover is stuck
-    stuck_time_threshold = 5
-    
-    if math.fabs(self.rover.vel) < 0.1:
-        #Check for how long I have not been moving. 
-        stuck_time = time.time() - self.rover.stuck_position_time
-    
-        if stuck_time > stuck_time_threshold:
-            return True
-        else:
-            return False
-    else:
-        # Reset the timer
-        self.rover.stuck_position_time = time.time()
-```
-
-//TODO Diferencia entre detectar el target y estar cerca de el.
-
-###### Detect a rock
-
-```python
-def is_detected(self):
-    #Threshold to decide if we have found a rock
-    pickup_rock_threshold = 0
-    # Threshold to decide if we gor for the rock, only if the rock is on the right.
-    pickup_rock_angle_threshold = 3
-    if len(self.rover.rock_angles) > pickup_rock_threshold:
-        #If the rock is on the Left, do not go for it.
-        steer = self.select_steer()
-        if steer > pickup_rock_angle_threshold:
-            return False
-        else: 
-            return True
-    else: 
-        return False
-```
-
-###### Detect we are near a rock
-
-def is_detected(self):
-        distance = np.sqrt((self.home_pos_x - self.rover.pos[0])**2 + (self.home_pos_y - self.rover.pos[1])**2)
-        #print ('rover_home_detected = ' , distance)
-        if distance < 5:
-            return True
-        else:
-            return False
-
+In stop mode the Rover slows down, then turns on itself until it finds navigable terrain again.
 
 
