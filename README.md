@@ -88,7 +88,7 @@ In autonomous navigation the rover will travel as much of the terrain as possibl
 Several strategies have been used to achieve this goal; which will then be explained in more detail, but which can be summarized in:
 
 * The rover will always move along the wall, to its right. In this way it will travel all over the world, without using sophisticated methods of navigation.
-* The strategy to navigate is based on the average of the angles, in polar coordinates, of the navigable terrain. On some occasions this strategy makes the rove of laps in circles. To avoid this, when standard deviation is very high, normally in open spaces where navigable terrain exists in many directions, a random spin is introduced to the navigation direction, to avoid circling.
+* The strategy to navigate is based on the average of the angles, in polar coordinates, of the navigable terrain. On some occasions this strategy makes the rover of laps in circles. To avoid this, when standard deviation is very high, normally in open spaces where navigable terrain exists in many directions, a random spin is introduced to the navigation direction.
 * In case it does not have navigable terrain in front, it will turn around until it finds navigable terrain again. This condition is useful when it  is in a cul-de-sac.
 * At certain times, the rover is stuck between obstacles. A strategy has been implemented, based on the choice of a random unstuck angle, which allows to recover the state of navigation again.
 * During the navigation the rover is picking up the rocks that it finds in its passage. In addition, when it finishs collecting all the rocks, it must return to the starting point. The solution chosen does not differentiate between the way to collect the rock or go to the starting point: the rover navigates and when it is near a target it slows down and heads towards it. The goal can be either to take the rock or to go to the starting point.
@@ -117,7 +117,7 @@ From the forward mode we can switch to the following modes: stuck, stop, pickupr
 * From forward to pickuprock: if we are near a rock.
 * From forward to gameover: if we are near to starting point and we have alreay recollected all the rocks.
 
-##### Forward
+##### Forward mode
 
 In forward mode the rover checks: if it is stuck, if its speed is zero for five seconds; if it has detected a target: either rock or starting point after collecting all rocks; if it has navigable terrain in front, in which case it continues moving; or if it does not have navegable terrain, in which case it goes into stop mode.
 
@@ -192,7 +192,6 @@ The goal can be a rock or the starting point. In decision_step no distinction is
 ```python
 def is_detected(self):
     distance = np.sqrt((self.home_pos_x - self.rover.pos[0])**2 + (self.home_pos_y - self.rover.pos[1])**2)
-    #print ('rover_home_detected = ' , distance)
     if distance < 5:
         return True
     else:
@@ -203,12 +202,11 @@ def is_detected(self):
 
 ```python
 def is_detected(self):
-        distance = np.sqrt((self.home_pos_x - self.rover.pos[0])**2 + (self.home_pos_y - self.rover.pos[1])**2)
-        #print ('rover_home_detected = ' , distance)
-        if distance < 5:
-            return True
-        else:
-            return False
+    distance = np.sqrt((self.home_pos_x - self.rover.pos[0])**2 + (self.home_pos_y - self.rover.pos[1])**2)
+    if distance < 5:
+        return True
+    else:
+        return False
 ```
 
 ###### Detect target is reacheable 
@@ -285,3 +283,77 @@ def select_navigation_steer(self):
     return filter_steer_correction(steer_clipped)
 ```
 
+##### Stuck mode
+
+In stuck mode the speed is reduced, a random angle is selected to exit the stuck and it is attempted to advance in this direction.
+
+```python
+elif Rover.mode == 'stuck':
+    # Reduce velocity if we are still moving
+    if Rover.vel > 0.2:
+        rover.stop()
+    else:
+        # Twist the rover in the  unstuck  direction
+        rover.select_unstuk_yaw()
+        # Go forward in the unstuck direction
+        if rover.is_unstuk_yaw_reached():
+            # Reset the stuck timer
+            Rover.stuck_position_time = time.time()
+            # Select the next unstuck direction
+            Rover.unstuck_yaw=random.uniform(0,360)
+            Rover.mode = 'forward'
+```
+
+##### Stop mode
+
+In stop mode speed is reduced and the rover rotates on itself until it can see navigable terrain again.
+
+```python
+elif Rover.mode == 'stop':
+    # Reduce velocity if we are still moving 
+    if Rover.vel > 0.2:
+        rover.stop()
+    else:
+        # Twist the rover until navigable terrain ahead again
+        rover.twist()
+        if rover.is_navigable_terrain(threshold=Rover.go_forward) :
+            Rover.mode = 'forward'
+```
+
+##### Pickup Rock mode
+
+In pickup mode the rover stops and picks up the rock. When it has finished picking up the rock, go to finishpickuprock mode.
+
+```python
+elif Rover.mode == 'pickuprock':
+    # Stop the rover to pick up the rock
+    rover.stop()
+    # Pick up the rock
+    if Rover.near_sample and Rover.vel == 0 and not Rover.picking_up:
+        Rover.send_pickup = True
+    else:
+        # Move to detect if the rock has been picked up                
+        Rover.mode = 'finishpickuprock'
+```
+
+##### Finish Pickup Rock mode
+
+In finishpickrock mode it is checked if the rover finished picking up the rock and starts sailing again.
+
+```python
+elif Rover.mode == 'finishpickuprock':
+    if  not Rover.picking_up:
+        #Reset stuck time and go forward
+        Rover.stuck_position_time = time.time() 
+        Rover.mode = 'forward'
+```
+
+##### Game over mode
+
+In gameover mode the rover stops.
+
+```python
+elif Rover.mode == 'gameover':
+    print("Game over")
+    rover.stop()
+```
